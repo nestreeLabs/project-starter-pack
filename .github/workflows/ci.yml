@@ -84,7 +84,7 @@ jobs:
           REPO="${GITHUB_REPOSITORY#*/}"
           {
             echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:$TAG"
-            echo "DIR=/opt/${REPO,,}"
+            echo "DIR=/opt/site"
             echo "TARGET=$SSH_USER@$SSH_HOST"
           } >> "$GITHUB_ENV"
 

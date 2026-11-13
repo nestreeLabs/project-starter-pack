@@ -1,0 +1,29 @@
+#cloud-config
+# Первичная настройка VPS для деплоя из GitHub Actions.
+# Перед вставкой в панель хостинга замени:
+#   <DEPLOY_PUBLIC_KEY> — содержимое ~/.ssh/deploy_key.pub
+#   <REPO>              — имя репозитория в нижнем регистре
+
+# группа нужна до создания пользователя, docker потом её переиспользует
+groups:
+  - docker
+
+users:
+  - default
+  - name: deploy
+    groups: [docker]
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - <DEPLOY_PUBLIC_KEY>
+
+package_update: true
+packages:
+  - ufw
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - install -d -o deploy -g deploy /opt/<REPO>
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw --force enable
