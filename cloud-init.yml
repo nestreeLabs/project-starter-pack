@@ -2,7 +2,6 @@
 # Первичная настройка VPS для деплоя из GitHub Actions.
 # Перед вставкой в панель хостинга замени:
 #   <DEPLOY_PUBLIC_KEY> — содержимое ~/.ssh/deploy_key.pub
-#   <REPO>              — имя репозитория в нижнем регистре
 
 # группа нужна до создания пользователя, docker потом её переиспользует
 groups:
@@ -23,7 +22,7 @@ packages:
 
 runcmd:
   - curl -fsSL https://get.docker.com | sh
-  - install -d -o deploy -g deploy /opt/<REPO>
+  - install -d -o deploy -g deploy /opt/site
   - ufw allow 22/tcp
   - ufw allow 80/tcp
   - ufw --force enable
