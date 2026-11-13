@@ -4,18 +4,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  # деплой: Run workflow с main = последняя версия, с тега (Use workflow from → Tags) = эта версия
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "sha образа для отката (пусто = собрать и выкатить текущий коммит)"
-        required: false
 
 permissions:
   contents: read
 
 jobs:
   test:
-    if: inputs.tag == ''
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,46 +28,86 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    # релизы с main идут по очереди, чтобы два запуска не посчитали одну версию
+    concurrency: build-${{ github.ref }}
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       # ghcr принимает только нижний регистр
       - id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      # версия по Conventional Commits с прошлого тега: ! или BREAKING CHANGE → major, feat → minor, fix/perf → patch.
+      # Остальные типы (docs, ci, chore...) релиз не создают. Пустая версия = только сборка
+      - id: version
+        if: github.event_name == 'push'
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          log=$(git log --format='%s%n%b' "${last:+$last..}HEAD")
+          if grep -qE '^[a-z]+(\([^)]*\))?!:|^BREAKING CHANGE:' <<< "$log"; then bump=major
+          elif grep -qE '^feat(\([^)]*\))?:' <<< "$log"; then bump=minor
+          elif grep -qE '^(fix|perf)(\([^)]*\))?:' <<< "$log"; then bump=patch
+          fi
+          if [[ -n "${bump:-}" ]]; then
+            IFS=. read -r major minor patch <<< "${last:-v0.0.0}"
+            major=${major#v}
+            case "$bump" in
+              major) v="v$((major + 1)).0.0" ;;
+              minor) v="v$major.$((minor + 1)).0" ;;
+              patch) v="v$major.$minor.$((patch + 1))" ;;
+            esac
+          fi
+          echo "version=${v:-}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
-      - if: github.event_name == 'workflow_dispatch'
+      - if: steps.version.outputs.version != ''
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # на PR и push образ только собирается, публикуется при ручном запуске
       - uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ github.event_name == 'workflow_dispatch' }}
+          push: ${{ steps.version.outputs.version != '' }}
           tags: |
-            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:${{ steps.version.outputs.version || 'dev' }}
             ${{ steps.image.outputs.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # тег ставится только после успешной публикации образа
+      - if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: git tag "$VERSION" && git push origin "$VERSION"
 
   deploy:
-    needs: build
-    # при откате (tag задан) test и build пропущены, deploy всё равно идёт
-    if: github.event_name == 'workflow_dispatch' && !cancelled() && !failure()
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     concurrency: deploy-production
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
       SSH_USER: ${{ secrets.SSH_USER }}
-      TAG: ${{ inputs.tag || github.sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # запуск с тега = эта версия (откат), с ветки = последняя выпущенная
+      - name: Определить версию
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          fi
+          [[ -n "$TAG" ]] || { echo "Нет ни одной версии v*, сначала нужен релиз"; exit 1; }
+          echo "Деплой $TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: Настроить ssh
         env:
