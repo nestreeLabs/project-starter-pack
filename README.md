@@ -120,7 +120,7 @@ build: обновлены зависимости
 - [x] ESLint + Prettier
 - [x] Pre-commit хук: lint-staged + `astro check`
 - [ ] 🐳 Docker-образ на `@astrojs/node` (standalone)
-- [ ] ⚙️ CI на GitHub Actions: lint, check и build на каждый PR
+- [x] ⚙️ CI на GitHub Actions: lint, format, check и build на каждый PR и push в `main`
 - [ ] 🚢 Ручной деплой на VPS по SSH через GHCR, доступы хранятся в GitHub Secrets
 
 ## 📄 Лицензия
