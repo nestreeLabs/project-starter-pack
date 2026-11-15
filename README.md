@@ -22,18 +22,22 @@
 
 ## ✨ Что внутри
 
-|     | Возможность         | Чем сделано                                |
-| :-: | :------------------ | :----------------------------------------- |
-| 🪐  | Фреймворк           | Astro 7                                    |
-| 🛡️  | Проверка типов      | `astro check` + TypeScript strict          |
-| 🔍  | Линтинг             | ESLint: JS, TypeScript, `.astro`           |
-| 🎨  | Форматирование      | Prettier с плагином для `.astro`           |
-| 🪝  | Проверки до коммита | husky + lint-staged                        |
-| 📝  | История коммитов    | Conventional Commits, описание на русском  |
-| 🐳  | Контейнер           | Docker, `@astrojs/node` standalone         |
-| ⚙️  | CI                  | GitHub Actions: lint, format, check, build |
-| 🏷️  | Релизы              | версия и git-тег по коммитам               |
-| 🚢  | Деплой              | вручную на VPS по SSH, образ из GHCR       |
+|     | Возможность         | Чем сделано                                                     |
+| :-: | :------------------ | :-------------------------------------------------------------- |
+| 🪐  | Фреймворк           | Astro 7                                                         |
+| 🧱  | Базовый layout      | `Layout.astro`: CSS-переменные, сброс стилей                    |
+| 🔤  | Шрифты              | Astro Fonts API, Inter из Google Fonts                          |
+| 🎨  | Стили               | SCSS-модули (`style.module.scss`)                               |
+| 🔎  | SEO                 | `SEO.astro`: title, description, canonical, Open Graph, Twitter |
+| 🛡️  | Проверка типов      | `astro check` + TypeScript strict                               |
+| 🔍  | Линтинг             | ESLint: JS, TypeScript, `.astro`                                |
+| 🎨  | Форматирование      | Prettier с плагином для `.astro`                                |
+| 🪝  | Проверки до коммита | husky + lint-staged                                             |
+| 📝  | История коммитов    | Conventional Commits, описание на русском                       |
+| 🐳  | Контейнер           | Docker, `@astrojs/node` standalone                              |
+| ⚙️  | CI                  | GitHub Actions: lint, format, check, build                      |
+| 🏷️  | Релизы              | версия и git-тег по коммитам                                    |
+| 🚢  | Деплой              | вручную на VPS по SSH, образ из GHCR                            |
 
 ## 🏁 Быстрый старт
 
@@ -88,8 +92,15 @@ flowchart LR
 ├── 🪝 .husky/             git-хуки
 ├── 🖼️ public/             статика без обработки
 ├── 📁 src/
-│   └── 📄 pages/          каждый .astro / .md файл становится роутом
-│       └── api/health.ts  проверка, что Node-сервер жив
+│   ├── ⚙️ @common/        системное, не UI: SEO/SEO.astro
+│   ├── 🗃️ @data/          статичные данные: features.ts
+│   ├── 🧩 @sections/      секции страниц: Hero/
+│   ├── 🧮 @utils/         функции с логикой: seo.ts
+│   ├── 🖼️ @views/         страницы целиком: Home/Home.astro
+│   ├── 🧱 layout/         Layout.astro и common.css
+│   ├── 📄 pages/          роуты, только подключают страницу из @views
+│   │   └── api/health.ts  проверка, что Node-сервер жив
+│   └── 🏷️ types.ts        все типы проекта
 ├── 🐳 Dockerfile
 ├── 🐳 compose.yml         один файл для локального запуска и сервера
 ├── ☁️ cloud-init.yml      первичная настройка VPS
@@ -98,6 +109,50 @@ flowchart LR
 ├── 🎨 .prettierrc.json
 └── 📦 package.json
 ```
+
+## 🏛️ Архитектура
+
+Страница собирается сверху вниз из слоёв. Каждый слой импортирует только слои ниже себя:
+
+```text
+pages/index.astro            роут: <Home />
+  └── @views/Home            meta + <Layout {meta}> + секции
+        ├── layout/Layout    html, head (<SEO />, шрифты), body со <slot />
+        └── @sections/Hero   секция страницы
+              └── @components  составные компоненты (собираются из @ui)
+                    └── @ui      базовые элементы: кнопка, инпут, бейдж
+```
+
+| Папка                 | Что лежит                                                 | Алиас           |
+| :-------------------- | :-------------------------------------------------------- | :-------------- |
+| `pages/`              | роуты, внутри только импорт страницы из `@views`          | —               |
+| `@views/<Page>/`      | страница целиком: `meta`, `Layout`, набор секций          | `@views/*`      |
+| `@sections/<Name>/`   | секции страниц                                            | `@sections/*`   |
+| `@components/<Name>/` | составные компоненты из `@ui`                             | `@components/*` |
+| `@ui/<Name>/`         | базовые UI-элементы без логики                            | `@ui/*`         |
+| `@common/<Name>/`     | системные вещи, не UI (`SEO`)                             | `@common/*`     |
+| `layout/`             | `Layout.astro`, глобальные стили и CSS-переменные         | `@layout/*`     |
+| `@data/`              | статичные данные: списки, тексты                          | `@data/*`       |
+| `@utils/`             | чистые функции: принимают аргументы, возвращают результат | `@utils/*`      |
+| `types.ts`            | все типы и интерфейсы                                     | `@types`        |
+
+> [!NOTE]
+> Папки `@ui` и `@components` появятся вместе с первым компонентом, алиасы для них уже есть в [tsconfig.json](tsconfig.json).
+
+### Правила
+
+- **`.astro` содержит только вёрстку.** Во frontmatter допустимы импорты, `Astro.props` и вызов готовых функций. Вычисления выносятся в `@utils`, данные в `@data`
+- **Компонент живёт в своей папке:** `Hero/Hero.astro`, стили рядом в `style.module.scss`
+- **Стили:** глобальные только в `layout/common.css`, у компонентов SCSS-модули (`class={styles.title}`). Без `<style>` в `.astro` и без inline-стилей, цвета берутся из CSS-переменных
+- **Импорты только через алиасы**, без `../`
+- **Типы** лежат в `src/types.ts`. Интерфейс с префиксом `I` (`ISEO`), type-алиас с префиксом `T` (`TSEO`). В `.astro` пишется `type Props = ISEO;`, это имя нужно Astro для проверки пропсов
+- **Мета страницы** задаётся во view объектом `const meta: ISEO = {...}` и передаётся как `<Layout {meta}>`
+
+### Как добавить страницу
+
+1. Секция: `src/@sections/Team/Team.astro` и `style.module.scss`, данные для неё в `src/@data/`
+2. Страница: `src/@views/About/About.astro` с `meta` и `<Layout {meta}><Team /></Layout>`
+3. Роут: `src/pages/about.astro`, внутри только `<About />` из `@views/About/About.astro`
 
 ## 🚢 Релизы и деплой
 
@@ -180,6 +235,7 @@ build: обновлены зависимости
 ## 🗺️ Roadmap
 
 - [x] Astro + TypeScript strict
+- [x] 🧱 Базовый Layout, шрифты и SEO-компонент
 - [x] ESLint + Prettier
 - [x] Pre-commit хук: lint-staged + `astro check`
 - [x] 🐳 Docker-образ на `@astrojs/node` (standalone)
