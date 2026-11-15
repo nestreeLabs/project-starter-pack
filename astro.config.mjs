@@ -1,9 +1,7 @@
 // @ts-check
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 import node from "@astrojs/node";
-
-import { fonts } from "@core/fonts";
 
 // https://astro.build/config
 export default defineConfig({
@@ -12,5 +10,13 @@ export default defineConfig({
   adapter: node({
     mode: "standalone",
   }),
-  fonts,
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: "Inter",
+      cssVariable: "--font-primary",
+      weights: [400, 700],
+      subsets: ["latin", "cyrillic"],
+    },
+  ],
 });

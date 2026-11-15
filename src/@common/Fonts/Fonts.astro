@@ -1,9 +1,6 @@
 ---
 import { Font } from "astro:assets";
-
-import { fonts } from "@core/fonts";
 ---
 
-{fonts.map(({ cssVariable }) => (
-  <Font {cssVariable} preload />
-))}
+<!-- Каждому шрифту из fonts в astro.config.mjs нужен свой <Font> -->
+<Font cssVariable="--font-primary" preload />
