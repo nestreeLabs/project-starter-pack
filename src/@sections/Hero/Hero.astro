@@ -1,0 +1,31 @@
+---
+import { features } from "@data/features";
+
+import styles from "./style.module.scss";
+---
+
+<section class={styles.hero}>
+  <div class={styles.inner}>
+    <p class={styles.badge}>project-starter-pack</p>
+    <h1 class={styles.title}>
+      Стартовый шаблон, <span class={styles.accent}>готовый к работе</span>
+    </h1>
+    <p class={styles.lead}>
+      Astro-проект с настроенными проверками, SEO, Docker и деплоем. Клонируй и
+      сразу пиши фичи, а не конфиги.
+    </p>
+    <code class={styles.command}>npm install && npm run dev</code>
+
+    <ul class={styles.grid}>
+      {features.map(({ icon, title, text }) => (
+        <li class={styles.card}>
+          <span class={styles.icon} aria-hidden="true">
+            {icon}
+          </span>
+          <h2 class={styles.cardTitle}>{title}</h2>
+          <p class={styles.cardText}>{text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

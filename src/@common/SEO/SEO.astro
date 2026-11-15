@@ -1,0 +1,46 @@
+---
+import { getSEOUrls } from "@utils/seo";
+
+import type { ISEO } from "@types";
+
+type Props = ISEO;
+
+const {
+  title,
+  description,
+  canonical,
+  image,
+  type = "website",
+  noindex = false,
+  siteName,
+  locale,
+} = Astro.props;
+
+const { canonicalURL, imageURL } = getSEOUrls({
+  base: Astro.site ?? Astro.url,
+  pathname: Astro.url.pathname,
+  canonical,
+  image,
+});
+---
+
+<title>{title}</title>
+{description && <meta name="description" content={description} />}
+<link rel="canonical" href={canonicalURL} />
+<meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
+
+<meta property="og:type" content={type} />
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:url" content={canonicalURL} />
+{siteName && <meta property="og:site_name" content={siteName} />}
+{locale && <meta property="og:locale" content={locale} />}
+{imageURL && <meta property="og:image" content={imageURL} />}
+
+<meta
+  name="twitter:card"
+  content={imageURL ? "summary_large_image" : "summary"}
+/>
+<meta name="twitter:title" content={title} />
+{description && <meta name="twitter:description" content={description} />}
+{imageURL && <meta name="twitter:image" content={imageURL} />}
