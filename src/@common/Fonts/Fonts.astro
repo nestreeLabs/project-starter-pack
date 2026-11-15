@@ -1,0 +1,9 @@
+---
+import { Font } from "astro:assets";
+
+import { fonts } from "@core/fonts";
+---
+
+{fonts.map(({ cssVariable }) => (
+  <Font {cssVariable} preload />
+))}

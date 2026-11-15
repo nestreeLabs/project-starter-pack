@@ -20,10 +20,8 @@ export interface IFeature {
   text: string;
 }
 
-export interface IGetSEOUrls {
+export interface IGetSEOUrls extends Pick<ISEO, "canonical" | "image"> {
   /** Домен из `site` в astro.config, если не задан, берётся адрес запроса */
   base: URL;
   pathname: string;
-  canonical?: string;
-  image?: string;
 }

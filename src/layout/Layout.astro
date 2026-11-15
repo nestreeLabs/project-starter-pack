@@ -1,9 +1,8 @@
 ---
-import { Font } from "astro:assets";
-
 import "./common.css";
 
 import SEO from "@common/SEO/SEO.astro";
+import Fonts from "@common/Fonts/Fonts.astro";
 
 import type { ILayout } from "@types";
 
@@ -17,10 +16,9 @@ const { meta, lang = "ru" } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
-    <Font cssVariable="--font-inter" preload />
+    <Fonts />
     <SEO {...meta} />
   </head>
   <body>
